@@ -47,6 +47,15 @@
         - url: https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp
           file: "{{ ansible_facts.env.HOME }}/.local/bin/yt-dlp"
 
+    - ansible.builtin.shell:
+        cmd: "gnome-extensions info {{ item }} | grep 'Enabled: Yes' || gnome-extensions enable {{ item }}"
+      register: shell_result
+      changed_when: "'Enabled: Yes' not in shell_result.stdout"
+      loop:
+        - launch-new-instance@gnome-shell-extensions.gcampax.github.com
+        - places-menu@gnome-shell-extensions.gcampax.github.com
+        - window-list@gnome-shell-extensions.gcampax.github.com
+
     - ansible.builtin.file:
         path: "{{ ansible_facts.env.HOME }}/.ssh"
         mode: "700"
@@ -73,6 +82,8 @@
           value: "true"
         - key: /org/gnome/desktop/interface/color-scheme
           value: "'prefer-dark'"
+        - key: /org/gnome/desktop/interface/enable-hot-corners
+          value: "false"
         - key: /org/gnome/desktop/notifications/show-in-lock-screen
           value: "false"
         - key: /org/gnome/desktop/peripherals/touchpad/tap-to-click
@@ -83,6 +94,14 @@
           value: "uint32 900"
         - key: /org/gnome/desktop/sound/event-sounds
           value: "false"
+        - key: /org/gnome/desktop/wm/keybindings/switch-applications
+          value: "['<Super>Tab']"
+        - key: /org/gnome/desktop/wm/keybindings/switch-applications-backward
+          value: "['<Shift><Super>Tab']"
+        - key: /org/gnome/desktop/wm/keybindings/switch-windows
+          value: "['<Alt>Tab']"
+        - key: /org/gnome/desktop/wm/keybindings/switch-windows-backward
+          value: "['<Shift><Alt>Tab']"
         - key: /org/gnome/nautilus/preferences/default-folder-viewer
           value: "'list-view'"
         - key: /org/gnome/settings-daemon/plugins/color/night-light-enabled
@@ -95,8 +114,10 @@
           value: "'nothing'"
         - key: /org/gnome/settings-daemon/plugins/power/sleep-inactive-battery-type
           value: "'nothing'"
+        - key: /org/gnome/shell/app-switcher/current-workspace-only
+          value: "true"
         - key: /org/gnome/shell/favorite-apps
-          value: "['org.mozilla.firefox.desktop', 'org.gnome.Nautilus.desktop', 'org.gnome.Ptyxis.desktop', 'mullvad-vpn.desktop', 'google-chrome.desktop', 'chrome-faolnafnngnfdaknnbpnkhgohbobgegn-Default.desktop', 'chrome-cifhbcnohmdccbgoicgdjpfamggdegmo-Default.desktop', 'chrome-pjibgclleladliembfgfagdaldikeohf-Default.desktop']"
+          value: "['org.mozilla.firefox.desktop', 'org.gnome.Nautilus.desktop', 'org.gnome.Ptyxis.desktop', 'mullvad-vpn.desktop', 'google-chrome.desktop', 'com.spotify.Client.desktop']"
 
     - community.general.ini_file:
         path: "{{ item.path }}"

@@ -1,5 +1,13 @@
 ---
 
+- community.general.flatpak_remote:
+    flatpakrepo_url: https://dl.flathub.org/repo/flathub.flatpakrepo
+    name: flathub
+  become: yes
+
+- community.general.flatpak:
+    name: com.spotify.Client
+
 - community.general.ini_file:
     path: "{{ item.path }}"
     section: "{{ item.section }}"
