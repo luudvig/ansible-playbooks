@@ -12,7 +12,7 @@
   loop:
     - url: https://github.com/docker/compose/releases/latest/download/docker-compose-linux-x86_64
       file: /usr/local/bin/docker-compose
-    - cmd: curl --location https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+    - cmd: curl --location https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-4 | bash
       file: /usr/local/bin/helm
     - url: https://dl.k8s.io/release/{{ lookup('ansible.builtin.url', 'https://dl.k8s.io/release/stable.txt') }}/bin/linux/amd64/kubectl
       file: /usr/local/bin/kubectl

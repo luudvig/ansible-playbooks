@@ -37,13 +37,17 @@
           line: export HISTCONTROL=ignoreboth
 
     - ansible.builtin.shell:
-        cmd: curl --create-dirs --location --output {{ item.file }} {{ item.url }} && chmod +x {{ item.file }}
+        cmd: "{{ item.cmd | default(['curl', '--create-dirs', '--location', '--output', item.file, item.url | default(omit), '&&', 'chmod', '+x', item.file] | join(' ')) }}"
         creates: "{{ item.file }}"
       loop:
         - url: https://gist.githubusercontent.com/luudvig/160c757005be61102bac4e3128ab313e/raw/encrypt-symmetric.sh
           file: "{{ ansible_facts.env.HOME }}/.local/bin/encrypt-symmetric.sh"
         - url: https://gist.githubusercontent.com/luudvig/10d227c86139029e73f4fdfc763d768e/raw/two-pass.sh
           file: "{{ ansible_facts.env.HOME }}/.local/bin/two-pass.sh"
+        - cmd: curl --location --output-dir /tmp --remote-name https://github.com/denoland/deno/releases/latest/download/deno-x86_64-unknown-linux-gnu.zip && unzip -d {{ ansible_facts.env.HOME }}/.local/bin /tmp/deno-x86_64-unknown-linux-gnu.zip deno
+          file: "{{ ansible_facts.env.HOME }}/.local/bin/deno"
+        - url: https://svtplay-dl.se/download/latest/svtplay-dl
+          file: "{{ ansible_facts.env.HOME }}/.local/bin/svtplay-dl"
         - url: https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp
           file: "{{ ansible_facts.env.HOME }}/.local/bin/yt-dlp"
 
