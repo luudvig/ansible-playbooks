@@ -60,15 +60,13 @@
         - content: |
             #!/usr/bin/bash
             PATH=/usr/bin:/sbin
-            set -e
             wg-quick up transmission
-            docker container run -d -e PUID=1000 -e PGID=1000 -e TZ=Europe/Stockholm -e USER=osmc -e PASS={{ new_password | quote }} --name transmission -p 9091:9091 -p 51413:51413 -p 51413:51413/udp --pull always -v /home/osmc/Transmission/config:/config -v /home/osmc/Transmission/downloads:/downloads linuxserver/transmission:latest
-            docker image ls -f 'dangling=true' --format {% raw %}'{{ '{{' }}.Repository}}\t{{ '{{' }}.ID}}'{% endraw %} | grep '^linuxserver/transmission\s' | awk '{print $2}' | xargs -r docker image rm
+            docker container run -d -e PUID=1000 -e PGID=1000 -e TZ=Europe/Stockholm -e USER=osmc -e PASS={{ new_password | quote }} --name transmission -p 9091:9091 -p 51413:51413 -p 51413:51413/udp --pull always -v /home/osmc/Transmission/config:/config -v /home/osmc/Transmission/downloads:/downloads linuxserver/transmission:latest || wg-quick down transmission
+            docker image prune -f
           dest: /home/osmc/Transmission/start.sh
         - content: |
             #!/usr/bin/bash
             PATH=/usr/bin:/sbin
-            set -e
             docker container rm -f transmission
             wg-quick down transmission
           dest: /home/osmc/Transmission/stop.sh
