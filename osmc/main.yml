@@ -37,6 +37,9 @@
         weekday: "1-5"
         user: osmc
       loop:
+        - name: IT Tools
+          job: /usr/bin/docker container rm -f it-tools; /usr/bin/docker container run -d --name it-tools -p 8080:8080 --pull always sharevb/it-tools:latest; /usr/bin/docker image prune -f
+          hour: "0"
         - name: Transmission start
           job: /home/osmc/Transmission/start.sh
           hour: "17"
