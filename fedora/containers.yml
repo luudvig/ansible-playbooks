@@ -1,5 +1,12 @@
 ---
 
+- ansible.builtin.copy:
+    src: /etc/hosts
+    dest: /etc/hosts.orig
+    mode: a-w
+    force: no
+  become: yes
+
 - ansible.builtin.lineinfile:
     path: "{{ ansible_facts.env.HOME }}/.bashrc"
     regexp: ^export DOCKER_HOST=
