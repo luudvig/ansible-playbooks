@@ -60,6 +60,26 @@
         - places-menu@gnome-shell-extensions.gcampax.github.com
         - window-list@gnome-shell-extensions.gcampax.github.com
 
+    - ansible.builtin.copy:
+        content: |
+          [Unit]
+          Description=Reset background
+          ConditionKernelCommandLine=bgreset
+          After=gnome-session.target
+
+          [Service]
+          ExecStart=/usr/bin/bash -c 'for k in "background picture-uri" "background picture-uri-dark" "screensaver picture-uri"; do /usr/bin/gsettings set org.gnome.desktop.$k "file:///usr/share/backgrounds/f{{ ansible_facts.distribution_major_version }}/default/f{{ ansible_facts.distribution_major_version }}.xml"; done'
+
+          [Install]
+          WantedBy=gnome-session.target
+        dest: "{{ ansible_facts.env.HOME }}/.config/systemd/user/bgreset.service"
+
+    - ansible.builtin.systemd_service:
+        name: bgreset.service
+        daemon_reload: yes
+        enabled: yes
+        scope: user
+
     - ansible.builtin.file:
         path: "{{ ansible_facts.env.HOME }}/.ssh"
         mode: "700"
@@ -88,6 +108,8 @@
           value: "'prefer-dark'"
         - key: /org/gnome/desktop/interface/enable-hot-corners
           value: "false"
+        - key: /org/gnome/desktop/interface/show-battery-percentage
+          value: "true"
         - key: /org/gnome/desktop/notifications/show-in-lock-screen
           value: "false"
         - key: /org/gnome/desktop/peripherals/touchpad/tap-to-click
