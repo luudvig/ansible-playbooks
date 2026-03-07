@@ -1,16 +1,34 @@
 ---
 
-# sudo dnf -y install ansible && git log --format=%ae:%an | uniq && ansible-playbook -K main.yml
+# sudo dnf -y install ansible && ansible-playbook -J -K main.yml
 
 - hosts: localhost
 
-  vars_prompt:
-    - name: git_user_email
-      prompt: GIT user email
-      private: no
-    - name: git_user_name
-      prompt: GIT user name
-      private: no
+  vars:
+    git_credential: !vault |
+          $ANSIBLE_VAULT;1.1;AES256
+          37313963623931636462306637366161363134623236326563376232303862313239323438373161
+          6631346361643861653361363530306464333433346530300a376233316164396231373965313938
+          61663832363336656661353531636336343233333533356334353535633665626166383532633637
+          6330616131363832640a383663383365333163623131343764636566306133623461333761353537
+          64376662626435303334633638373730636365613537323462306265306335356133633539626164
+          61613335396662313138323033646238383930356561373039343965663437366565346362626439
+          33626161636636633337643063366263646331663431386435366630323237623266343161376531
+          32636166313533346131
+    git_user_email: !vault |
+          $ANSIBLE_VAULT;1.1;AES256
+          36666566393530656132633464313739353962383630633434393333363066663163383234373038
+          6134653462306336363532363066313932356339636133640a306638653733393566396137303732
+          33333037396632633662393766323034643563356138633832353663313630653733366565366630
+          3335626436643739370a366266366639353736623239353962323939386235353931616566656233
+          37333261353830336530316137616137353263373836316134303265333439346534
+    git_user_name: !vault |
+          $ANSIBLE_VAULT;1.1;AES256
+          32623933303966333764303836336535343036656665653139373530616434643435626334626665
+          6637643433333862343939666635316664306134646163390a616537303065313632383563383565
+          30393530653761393539333536353030663863343338636364386164323433323936306163653437
+          6138376262376131640a323037316463343039636637623232343033393264313631303237336639
+          3034
 
   tasks:
     - import_tasks: containers.yml
@@ -27,14 +45,22 @@
         use: systemd
 
     - ansible.builtin.lineinfile:
-        path: "{{ ansible_facts.env.HOME }}/.bashrc"
-        regexp: "{{ item.regexp }}"
+        path: "{{ item.path }}"
+        regexp: "{{ item.regexp | default(omit) }}"
         line: "{{ item.line }}"
+        mode: "{{ item.mode | default(omit) }}"
+        create: "{{ item.create | default(omit) }}"
       loop:
-        - regexp: ^export EDITOR=
+        - path: "{{ ansible_facts.env.HOME }}/.bashrc"
+          regexp: ^export EDITOR=
           line: export EDITOR=/usr/bin/vim
-        - regexp: ^export HISTCONTROL=
+        - path: "{{ ansible_facts.env.HOME }}/.bashrc"
+          regexp: ^export HISTCONTROL=
           line: export HISTCONTROL=ignoreboth
+        - path: "{{ ansible_facts.env.HOME }}/.git-credentials"
+          line: "{{ git_credential }}"
+          mode: "600"
+          create: yes
 
     - ansible.builtin.shell:
         cmd: "{{ item.cmd | default(['curl', '--create-dirs', '--location', '--output', item.file, item.url | default(omit), '&&', 'chmod', '+x', item.file] | join(' ')) }}"
@@ -79,16 +105,6 @@
         daemon_reload: yes
         enabled: yes
         scope: user
-
-    - ansible.builtin.file:
-        path: "{{ ansible_facts.env.HOME }}/.ssh"
-        mode: "700"
-        state: directory
-
-    - community.crypto.openssh_keypair:
-        path: "{{ ansible_facts.env.HOME }}/.ssh/id_ed25519"
-        comment: "{{ ansible_facts.user_id }}@{{ ansible_facts.hostname }}"
-        type: ed25519
 
     - community.general.dconf:
         key: "{{ item.key }}"
@@ -168,6 +184,10 @@
           create: no
           no_extra_spaces: yes
           become: yes
+        - path: "{{ ansible_facts.env.HOME }}/.gitconfig"
+          section: credential
+          option: "\thelper"
+          value: "store"
         - path: "{{ ansible_facts.env.HOME }}/.gitconfig"
           section: user
           option: "\temail"
