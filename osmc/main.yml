@@ -32,20 +32,24 @@
     - ansible.builtin.cron:
         name: "{{ item.name }}"
         job: "{{ item.job }}"
-        hour: "{{ item.hour }}"
-        minute: "0"
-        weekday: "1-5"
+        minute: "{{ item.minute }}"
+        hour: "{{ item.hour | default(omit) }}"
+        weekday: "{{ item.weekday | default(omit) }}"
         user: osmc
       loop:
         - name: IT Tools
           job: /usr/bin/docker container rm -f it-tools; /usr/bin/docker container run -d --name it-tools -p 8080:8080 --pull always sharevb/it-tools:latest; /usr/bin/docker image prune -f
-          hour: "0"
+          minute: "0"
+          hour: "6"
+          weekday: "1-5"
         - name: Transmission start
           job: /home/osmc/Transmission/start.sh
+          minute: "0"
           hour: "17"
+          weekday: "1-5"
         - name: Transmission stop
           job: /home/osmc/Transmission/stop.sh
-          hour: "5"
+          minute: "5"
 
     - ansible.builtin.file:
         path: /home/osmc/Transmission
@@ -63,14 +67,16 @@
         - content: |
             #!/usr/bin/bash
             PATH=/usr/bin:/sbin
-            wg-quick up transmission
+            wg-quick up transmission || exit
             docker container run -d -e PUID=1000 -e PGID=1000 -e TZ=Europe/Stockholm -e USER=osmc -e PASS={{ new_password | quote }} --name transmission -p 9091:9091 -p 51413:51413 -p 51413:51413/udp --pull always -v /home/osmc/Transmission/config:/config -v /home/osmc/Transmission/downloads:/downloads linuxserver/transmission:latest || wg-quick down transmission
             docker image prune -f
           dest: /home/osmc/Transmission/start.sh
         - content: |
             #!/usr/bin/bash
             PATH=/usr/bin:/sbin
-            docker container rm -f transmission
+            [ -t 1 ] || [[ $(date +%u) -le 5 && $(date +%-H) -eq 5 ]] || (ip link show transmission && ! curl -m 60 https://am.i.mullvad.net/connected) || exit
+            docker container stop transmission
+            docker container rm transmission
             wg-quick down transmission
           dest: /home/osmc/Transmission/stop.sh
 
