@@ -4,11 +4,6 @@
 
 - hosts: all
 
-  vars_prompt:
-    - name: new_password
-      prompt: NEW password
-      confirm: yes
-
   roles:
     - role: geerlingguy.docker
       vars:
@@ -25,60 +20,34 @@
     - ansible.builtin.apt:
         name:
           - hd-idle
-          - resolvconf
           - rsync
-          - wireguard-tools
 
     - ansible.builtin.cron:
-        name: "{{ item.name }}"
-        job: "{{ item.job }}"
-        minute: "{{ item.minute }}"
-        hour: "{{ item.hour | default(omit) }}"
-        weekday: "{{ item.weekday | default(omit) }}"
+        name: docker refresh
+        job: /home/osmc/.docker/refresh.sh
+        minute: "0"
+        hour: "3"
         user: osmc
-      loop:
-        - name: IT Tools
-          job: /usr/bin/docker container rm -f it-tools; /usr/bin/docker container run -d --name it-tools -p 8080:8080 --pull always sharevb/it-tools:latest; /usr/bin/docker image prune -f
-          minute: "0"
-          hour: "6"
-          weekday: "1-5"
-        - name: Transmission start
-          job: /home/osmc/Transmission/start.sh
-          minute: "0"
-          hour: "17"
-          weekday: "1-5"
-        - name: Transmission stop
-          job: /home/osmc/Transmission/stop.sh
-          minute: "5"
 
     - ansible.builtin.file:
-        path: /home/osmc/Transmission
+        path: /home/osmc/.docker
         state: directory
         owner: osmc
         group: osmc
 
     - ansible.builtin.copy:
-        content: "{{ item.content }}"
-        dest: "{{ item.dest }}"
+        content: |
+          #!/bin/bash
+          docker image pull -q sharevb/it-tools:latest && docker image pull -q linuxserver/wireguard:latest || exit
+          docker container stop it-tools wireguard
+          docker container rm it-tools wireguard
+          docker container run -d --name it-tools -p 8080:8080 --restart always sharevb/it-tools:latest
+          docker container run -d --name wireguard --cap-add NET_ADMIN -e PUID=$(id -u) -e PGID=$(id -g) -e TZ=Europe/Stockholm -e SERVERURL=localhost -e PEERS=1 -e LOG_CONFS=false -p 51820:51820/udp --restart always -v /home/osmc/.docker/wireguard:/config linuxserver/wireguard:latest
+          docker image prune -f
+        dest: /home/osmc/.docker/refresh.sh
         mode: "555"
         owner: osmc
         group: osmc
-      loop:
-        - content: |
-            #!/usr/bin/bash
-            PATH=/usr/bin:/sbin
-            wg-quick up transmission || exit
-            docker container run -d -e PUID=1000 -e PGID=1000 -e TZ=Europe/Stockholm -e USER=osmc -e PASS={{ new_password | quote }} --name transmission -p 9091:9091 -p 51413:51413 -p 51413:51413/udp --pull always -v /home/osmc/Transmission/config:/config -v /home/osmc/Transmission/downloads:/downloads linuxserver/transmission:latest || wg-quick down transmission
-            docker image prune -f
-          dest: /home/osmc/Transmission/start.sh
-        - content: |
-            #!/usr/bin/bash
-            PATH=/usr/bin:/sbin
-            [ -t 1 ] || [[ $(date +%u) -le 5 && $(date +%-H) -eq 5 ]] || (ip link show transmission && ! curl -m 60 https://am.i.mullvad.net/connected) || exit
-            docker container stop transmission
-            docker container rm transmission
-            wg-quick down transmission
-          dest: /home/osmc/Transmission/stop.sh
 
     - ansible.builtin.lineinfile:
         path: "{{ item.path }}"
@@ -121,3 +90,8 @@
     - ansible.builtin.raw: echo -e "{{ ansible_password }}\n{{ new_password }}\n{{ new_password }}" | passwd
       become_user: osmc
       when: new_password != ansible_password
+
+  vars_prompt:
+    - name: new_password
+      prompt: NEW password
+      confirm: yes
