@@ -1,31 +1,5 @@
 ---
 
-- community.general.flatpak_remote:
-    flatpakrepo_url: https://dl.flathub.org/repo/flathub.flatpakrepo
-    name: flathub
-  become: yes
-
-- community.general.flatpak:
-    name: com.spotify.Client
-
-- community.general.ini_file:
-    path: "{{ item.path }}"
-    section: "{{ item.section }}"
-    option: "{{ item.option }}"
-    value: "{{ item.value }}"
-    create: no
-    no_extra_spaces: yes
-  become: yes
-  loop:
-    - path: /etc/fwupd/remotes.d/lvfs.conf
-      section: fwupd Remote
-      option: Enabled
-      value: "false"
-    - path: /etc/yum.repos.d/google-chrome.repo
-      section: google-chrome
-      option: enabled
-      value: "1"
-
 - ansible.builtin.get_url:
     url: https://repository.mullvad.net/rpm/stable/mullvad.repo
     dest: /etc/yum.repos.d/mullvad.repo
@@ -41,8 +15,25 @@
       disable_gpg_check: yes
     - name: ffmpeg
       allowerasing: yes
-    - name: google-chrome-stable
     - name: mullvad-vpn
-    - name: python3-psutil
     - name: vim-enhanced
-    - name: vlc
+
+- community.general.flatpak_remote:
+    name: flathub
+  become: yes
+
+- community.general.flatpak:
+    name: "{{ item.name }}"
+  loop:
+    - name: com.google.Chrome
+    - name: com.spotify.Client
+    - name: org.videolan.VLC
+
+- community.general.ini_file:
+    path: /etc/fwupd/remotes.d/lvfs.conf
+    section: fwupd Remote
+    option: Enabled
+    value: "false"
+    create: no
+    no_extra_spaces: yes
+  become: yes
