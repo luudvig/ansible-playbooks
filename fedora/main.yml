@@ -135,7 +135,7 @@
         - key: /org/gnome/shell/app-switcher/current-workspace-only
           value: "true"
         - key: /org/gnome/shell/favorite-apps
-          value: "['org.mozilla.firefox.desktop', 'org.gnome.Nautilus.desktop', 'org.gnome.Ptyxis.desktop', 'mullvad-vpn.desktop', 'com.google.Chrome.desktop', 'com.spotify.Client.desktop']"
+          value: "['org.mozilla.firefox.desktop', 'org.gnome.Nautilus.desktop', 'org.gnome.Ptyxis.desktop', 'mullvad-vpn.desktop', 'com.spotify.Client.desktop']"
 
     - community.general.ini_file:
         path: "{{ item.path }}"

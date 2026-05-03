@@ -27,6 +27,7 @@
   loop:
     - name: com.google.Chrome
     - name: com.spotify.Client
+    - name: org.gimp.GIMP
     - name: org.videolan.VLC
 
 - community.general.ini_file:
