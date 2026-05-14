@@ -1,6 +1,6 @@
 ---
 
-# ansible-playbook -b -i 192.168.0.X, -k -u osmc main.yml
+# ansible-galaxy role install -f geerlingguy.docker && ansible-playbook -b -i 192.168.0.X, -k -u osmc main.yml
 
 - hosts: all
 
