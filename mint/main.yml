@@ -1,0 +1,172 @@
+---
+
+# sudo add-apt-repository -y ppa:ansible/ansible && sudo apt -U -y install ansible && ansible-playbook -J -K main.yml
+
+- hosts: localhost
+
+  tasks:
+    - ansible.builtin.file:
+        path: "{{ ansible_facts.env.HOME }}/.config/systemd/user"
+        state: directory
+
+    - ansible.builtin.copy:
+        content: "{{ item.content | default(omit) }}"
+        src: "{{ item.src | default(omit) }}"
+        dest: "{{ item.dest }}"
+        mode: "{{ item.mode | default(omit) }}"
+        force: "{{ item.force | default(omit) }}"
+        unsafe_writes: "{{ item.unsafe_writes | default(omit) }}"
+      become: "{{ item.become | default(omit) }}"
+      loop:
+        - content: |
+            [Unit]
+            Description=Reset background
+            ConditionKernelCommandLine=bgreset
+            After=dbus.service
+
+            [Service]
+            ExecStart=/usr/bin/gsettings reset org.cinnamon.desktop.background picture-uri
+
+            [Install]
+            WantedBy=dbus.service
+          dest: "{{ ansible_facts.env.HOME }}/.config/systemd/user/bgreset.service"
+        - content: >
+            75
+          dest: /sys/class/power_supply/BAT0/charge_control_start_threshold
+          unsafe_writes: yes
+          become: yes
+        - content: >
+            80
+          dest: /sys/class/power_supply/BAT0/charge_control_end_threshold
+          unsafe_writes: yes
+          become: yes
+        - src: /etc/hosts
+          dest: /etc/hosts.orig
+          mode: a-w
+          force: no
+          become: yes
+
+    - ansible.builtin.lineinfile:
+        path: "{{ item.path }}"
+        regexp: "{{ item.regexp | default(omit) }}"
+        line: "{{ item.line }}"
+        mode: "{{ item.mode | default(omit) }}"
+        create: "{{ item.create | default(omit) }}"
+      loop:
+        - path: "{{ ansible_facts.env.HOME }}/.bashrc"
+          regexp: ^export EDITOR=
+          line: export EDITOR=/usr/bin/vim
+        - path: "{{ ansible_facts.env.HOME }}/.git-credentials"
+          line: "{{ git_credential }}"
+          mode: "600"
+          create: yes
+
+    - ansible.builtin.systemd_service:
+        name: bgreset.service
+        daemon_reload: yes
+        enabled: yes
+        scope: user
+
+    - community.general.dconf:
+        key: "{{ item.key }}"
+        value: "{{ item.value }}"
+      loop:
+        - key: /org/cinnamon/alttab-switcher-style
+          value: "'thumbnails'"
+        - key: /org/cinnamon/desktop/interface/clock-show-seconds
+          value: "true"
+        - key: /org/cinnamon/desktop/interface/first-day-of-week
+          value: "1"
+        - key: /org/cinnamon/desktop/keybindings/wm/maximize
+          value: "['<Super>Up']"
+        - key: /org/cinnamon/desktop/keybindings/wm/push-tile-down
+          value: "@as []"
+        - key: /org/cinnamon/desktop/keybindings/wm/push-tile-up
+          value: "@as []"
+        - key: /org/cinnamon/desktop/keybindings/wm/unmaximize
+          value: "['<Super>Down']"
+        - key: /org/cinnamon/desktop/media-handling/autorun-never
+          value: "true"
+        - key: /org/cinnamon/desktop/peripherals/touchpad/click-method
+          value: "'fingers'"
+        - key: /org/cinnamon/desktop/peripherals/touchpad/tap-to-click
+          value: "false"
+        - key: /org/cinnamon/desktop/privacy/remember-recent-files
+          value: "false"
+        - key: /org/cinnamon/muffin/tile-maximize
+          value: "true"
+        - key: /org/cinnamon/panels-enabled
+          value: "['1:0:left']"
+        - key: /org/cinnamon/settings-daemon/plugins/color/night-light-enabled
+          value: "true"
+        - key: /org/cinnamon/settings-daemon/plugins/power/idle-dim-battery
+          value: "false"
+        - key: /org/cinnamon/settings-daemon/plugins/power/sleep-display-ac
+          value: "900"
+        - key: /org/cinnamon/settings-daemon/plugins/power/sleep-display-battery
+          value: "900"
+        - key: /org/nemo/desktop/desktop-layout
+          value: "'false::false'"
+        - key: /org/nemo/preferences/default-folder-viewer
+          value: "'compact-view'"
+
+    - community.general.ini_file:
+        path: "{{ item.path }}"
+        section: "{{ item.section }}"
+        option: "{{ item.option }}"
+        value: "{{ item.value }}"
+        no_extra_spaces: "{{ item.no_extra_spaces | default(omit) }}"
+      become: "{{ item.become | default(omit) }}"
+      loop:
+        - path: /etc/lightdm/slick-greeter.conf
+          section: Greeter
+          option: background
+          value: ""
+          no_extra_spaces: yes
+          become: yes
+        - path: /etc/lightdm/slick-greeter.conf
+          section: Greeter
+          option: draw-user-backgrounds
+          value: "false"
+          no_extra_spaces: yes
+          become: yes
+        - path: "{{ ansible_facts.env.HOME }}/.gitconfig"
+          section: credential
+          option: "\thelper"
+          value: "store"
+        - path: "{{ ansible_facts.env.HOME }}/.gitconfig"
+          section: user
+          option: "\temail"
+          value: "{{ git_user_email }}"
+        - path: "{{ ansible_facts.env.HOME }}/.gitconfig"
+          section: user
+          option: "\tname"
+          value: "{{ git_user_name }}"
+
+    - import_tasks: software.yml
+
+  vars:
+    git_credential: !vault |
+          $ANSIBLE_VAULT;1.1;AES256
+          65643836316463366436633039613332396136326133313162633635363234643861396533343133
+          3633343530633030633839643361373633336662303662370a633635633063336139373037333136
+          61353264653039653835643538333761333638323437653335633366383062633632386531393266
+          3234626661373034610a353930336338313735306438663664656565616163306539393965653236
+          62373162643233613739643535396366656530636265363766373432393836633463373134343564
+          36353364666438366132373065646134323466313364623038616335623134323865353936393538
+          37663136343432386564613739373364376665346437386261313865343965626364353438366633
+          36336430373835366531
+    git_user_email: !vault |
+          $ANSIBLE_VAULT;1.1;AES256
+          35633336633835323664363561323535323065613335373231636139643362323565663838336561
+          3365333438666139336230366232363536623439656533340a363864366461343938323239336466
+          39653630396435393461616332393636353535353562333135393036356464383864393331316234
+          3538393863363262650a646431653631343130396435306339303836373433376162656662333066
+          65326266653361633937326361626238646464653262633562653439313365303932
+    git_user_name: !vault |
+          $ANSIBLE_VAULT;1.1;AES256
+          63386164663361353635383232343335393631336664393032633964363363353766656130333631
+          6564383163623133393634643433666435353333323935350a633836666361373236306464373231
+          31376562653464353134343664346435646437393230353234356165363639633264643261373932
+          3262616664373661350a313165363066303566613366656432626463656433333236366661393763
+          3964
