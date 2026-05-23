@@ -1,26 +1,29 @@
 ---
 
-# ansible-galaxy role install -f geerlingguy.docker && ansible-playbook -b -i 192.168.0.X, -k -u osmc main.yml
+# ansible-playbook -b -i 192.168.0.X, -k -u osmc main.yml
 
 - hosts: all
 
-  roles:
-    - role: geerlingguy.docker
-      vars:
-        docker_apt_ansible_distribution: "{{ ansible_os_family }}"
-        docker_install_compose_plugin: no
-        docker_packages:
-          - docker-{{ docker_edition }}:arm64
-          - docker-{{ docker_edition }}-cli:arm64
-          - containerd.io:arm64
-        docker_users:
-          - osmc
-
   tasks:
+    - ansible.builtin.deb822_repository:
+        components: stable
+        name: docker
+        signed_by: https://download.docker.com/linux/debian/gpg
+        suites: "{{ ansible_facts.distribution_release }}"
+        uris: https://download.docker.com/linux/debian
+        install_python_debian: yes
+
     - ansible.builtin.apt:
-        name:
-          - hd-idle
-          - rsync
+        name: "{{ item.name | default(omit) }}"
+        update_cache: "{{ item.update_cache | default(omit) }}"
+      loop:
+        - update_cache: yes
+        - name:
+            - containerd.io:arm64
+            - docker-ce-cli:arm64
+            - docker-ce:arm64
+            - hd-idle
+            - rsync
 
     - ansible.builtin.cron:
         name: docker refresh
@@ -86,6 +89,11 @@
         - path: /home/osmc/.bash_logout
           regexp: '^(\s*)(\[\s+-x\s+\/usr\/bin\/clear_console\s.*)$'
           replace: '\1: # \2'
+
+    - ansible.builtin.user:
+        name: osmc
+        append: yes
+        groups: docker
 
     - ansible.builtin.raw: echo -e "{{ ansible_password }}\n{{ new_password }}\n{{ new_password }}" | passwd
       become_user: osmc
