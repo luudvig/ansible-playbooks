@@ -54,6 +54,9 @@
         create: "{{ item.create | default(omit) }}"
       loop:
         - path: "{{ ansible_facts.env.HOME }}/.bashrc"
+          regexp: ^alias rclone-sync=
+          line: alias rclone-sync='rclone sync remote:/ ~/Remote'
+        - path: "{{ ansible_facts.env.HOME }}/.bashrc"
           regexp: ^export EDITOR=
           line: export EDITOR=/usr/bin/vim
         - path: "{{ ansible_facts.env.HOME }}/.git-credentials"
