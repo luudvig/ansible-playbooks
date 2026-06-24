@@ -1,23 +1,24 @@
 ---
 
-- ansible.builtin.get_url:
-    url: https://repository.mullvad.net/deb/mullvad-keyring.asc
-    dest: /usr/share/keyrings/mullvad-keyring.asc
-  become: yes
-
-- ansible.builtin.apt_repository:
-    repo: deb [signed-by=/usr/share/keyrings/mullvad-keyring.asc arch=amd64] https://repository.mullvad.net/deb/stable stable main
-    filename: mullvad
-  become: yes
-
 - ansible.builtin.deb822_repository:
     architectures: amd64
-    components: stable
-    name: docker
-    signed_by: https://download.docker.com/linux/ubuntu/gpg
-    suites: "{{ lookup('ansible.builtin.ini', 'UBUNTU_CODENAME', file='/etc/os-release', type='properties') }}"
-    uris: https://download.docker.com/linux/ubuntu
+    components: "{{ item.components }}"
+    name: "{{ item.name }}"
+    signed_by: "{{ item.signed_by }}"
+    suites: "{{ item.suites }}"
+    uris: "{{ item.uris }}"
   become: yes
+  loop:
+    - components: stable
+      name: docker
+      signed_by: https://download.docker.com/linux/ubuntu/gpg
+      suites: "{{ lookup('ansible.builtin.ini', 'UBUNTU_CODENAME', file='/etc/os-release', type='properties') }}"
+      uris: https://download.docker.com/linux/ubuntu
+    - components: main
+      name: mullvad
+      signed_by: https://repository.mullvad.net/deb/mullvad-keyring.asc
+      suites: stable
+      uris: https://repository.mullvad.net/deb/stable
 
 - ansible.builtin.apt:
     name: "{{ item.name | default(omit) }}"

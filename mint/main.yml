@@ -102,6 +102,8 @@
           value: "['1:0:left']"
         - key: /org/cinnamon/settings-daemon/plugins/color/night-light-enabled
           value: "true"
+        - key: /org/cinnamon/settings-daemon/plugins/color/night-light-temperature
+          value: "uint32 3700"
         - key: /org/cinnamon/settings-daemon/plugins/power/idle-dim-battery
           value: "false"
         - key: /org/cinnamon/settings-daemon/plugins/power/sleep-display-ac
