@@ -30,6 +30,16 @@
             [Install]
             WantedBy=dbus.service
           dest: "{{ ansible_facts.env.HOME }}/.config/systemd/user/bgreset.service"
+        - content: |
+            [Unit]
+            Description=Delete xulstore
+
+            [Service]
+            ExecStart=/usr/bin/find %h/.config/mozilla/firefox -name xulstore.json -delete
+
+            [Install]
+            WantedBy=default.target
+          dest: "{{ ansible_facts.env.HOME }}/.config/systemd/user/delxulstore.service"
         - content: >
             75
           dest: /sys/class/power_supply/BAT0/charge_control_start_threshold
@@ -54,6 +64,12 @@
         create: "{{ item.create | default(omit) }}"
       loop:
         - path: "{{ ansible_facts.env.HOME }}/.bashrc"
+          regexp: ^alias cpn=
+          line: alias cpn='cp --update=none'
+        - path: "{{ ansible_facts.env.HOME }}/.bashrc"
+          regexp: ^alias mvn=
+          line: alias mvn='mv --update=none'
+        - path: "{{ ansible_facts.env.HOME }}/.bashrc"
           regexp: ^alias rclone-sync=
           line: alias rclone-sync='rclone sync remote:/ ~/Remote'
         - path: "{{ ansible_facts.env.HOME }}/.bashrc"
@@ -65,10 +81,16 @@
           create: yes
 
     - ansible.builtin.systemd_service:
-        name: bgreset.service
-        daemon_reload: yes
-        enabled: yes
+        name: "{{ item.name | default(omit) }}"
+        daemon_reload: "{{ item.daemon_reload | default(omit) }}"
+        enabled: "{{ item.enabled | default(omit) }}"
         scope: user
+      loop:
+        - daemon_reload: yes
+        - name: bgreset.service
+          enabled: yes
+        - name: delxulstore.service
+          enabled: yes
 
     - community.general.dconf:
         key: "{{ item.key }}"
@@ -153,14 +175,14 @@
   vars:
     git_credential: !vault |
           $ANSIBLE_VAULT;1.1;AES256
-          65643836316463366436633039613332396136326133313162633635363234643861396533343133
-          3633343530633030633839643361373633336662303662370a633635633063336139373037333136
-          61353264653039653835643538333761333638323437653335633366383062633632386531393266
-          3234626661373034610a353930336338313735306438663664656565616163306539393965653236
-          62373162643233613739643535396366656530636265363766373432393836633463373134343564
-          36353364666438366132373065646134323466313364623038616335623134323865353936393538
-          37663136343432386564613739373364376665346437386261313865343965626364353438366633
-          36336430373835366531
+          31353735633361633830623337396532363964623430346166353262616633323337346563656464
+          6531356437383531373162363362336537303664656135620a373264323837343932303164666330
+          39626238643437326336373637313236633637326232353862396461333764656331346335386137
+          3766376166633766330a616664633831356432653935646230383365613664643530366338646232
+          30366136663438346233323761306432306163613134626531326461333432656433393562396163
+          34653866393963636239323534656165623934356634363339626436633337366334376137306231
+          37653533663136336561623833353737643465653361366435643336333634376637636161623365
+          63636237656562336337
     git_user_email: !vault |
           $ANSIBLE_VAULT;1.1;AES256
           35633336633835323664363561323535323065613335373231636139643362323565663838336561
