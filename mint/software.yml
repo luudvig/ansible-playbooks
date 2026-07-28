@@ -36,6 +36,7 @@
         - git
         - mullvad-vpn
         - vim
+        - virt-manager
         - wireguard
 
 - ansible.builtin.shell:
@@ -73,6 +74,5 @@
 
 - community.general.flatpak:
     name:
-      - com.spotify.Client
       - org.gimp.GIMP
       - org.keepassxc.KeePassXC
