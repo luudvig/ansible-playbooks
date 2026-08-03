@@ -25,9 +25,8 @@
 - community.general.flatpak:
     name: "{{ item.name }}"
   loop:
-    - name: com.google.Chrome
-    - name: com.spotify.Client
     - name: org.gimp.GIMP
+    - name: org.keepassxc.KeePassXC
     - name: org.videolan.VLC
 
 - community.general.ini_file:
