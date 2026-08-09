@@ -1,0 +1,69 @@
+---
+
+- ansible.builtin.get_url:
+    url: https://repository.mullvad.net/rpm/stable/mullvad.repo
+    dest: /etc/yum.repos.d/mullvad.repo
+  become: yes
+
+- ansible.builtin.dnf:
+    name: "{{ item.name }}"
+    allowerasing: "{{ item.allowerasing | default(omit) }}"
+    disable_gpg_check: "{{ item.disable_gpg_check | default(omit) }}"
+  become: yes
+  loop:
+    - name: https://download1.rpmfusion.org/free/fedora/rpmfusion-free-release-{{ ansible_facts.distribution_major_version }}.noarch.rpm
+      disable_gpg_check: yes
+    - name: ffmpeg
+      allowerasing: yes
+    - name: mullvad-vpn
+    - name: vim-enhanced
+
+- ansible.builtin.shell:
+    cmd: "{{ item.cmd | default(['curl', '--create-dirs', '--location', '--output', item.file, item.url | default(omit), '&&', 'chmod', '+x', item.file] | join(' ')) }}"
+    creates: "{{ item.file }}"
+  become: "{{ item.become | default(omit) }}"
+  loop:
+    - url: https://gist.githubusercontent.com/luudvig/160c757005be61102bac4e3128ab313e/raw/encrypt-symmetric.sh
+      file: "{{ ansible_facts.env.HOME }}/.local/bin/encrypt-symmetric.sh"
+    - url: https://gist.githubusercontent.com/luudvig/10d227c86139029e73f4fdfc763d768e/raw/two-pass.sh
+      file: "{{ ansible_facts.env.HOME }}/.local/bin/two-pass.sh"
+    - cmd: curl --location --output-dir /tmp --remote-name https://github.com/denoland/deno/releases/latest/download/deno-x86_64-unknown-linux-gnu.zip && unzip /tmp/deno-x86_64-unknown-linux-gnu.zip deno -d {{ ansible_facts.env.HOME }}/.local/bin
+      file: "{{ ansible_facts.env.HOME }}/.local/bin/deno"
+    - cmd: curl --location --output-dir /tmp --remote-name https://downloads.rclone.org/rclone-current-linux-amd64.zip && unzip -j /tmp/rclone-current-linux-amd64.zip \*/rclone -d {{ ansible_facts.env.HOME }}/.local/bin
+      file: "{{ ansible_facts.env.HOME }}/.local/bin/rclone"
+    - url: https://svtplay-dl.se/download/latest/svtplay-dl
+      file: "{{ ansible_facts.env.HOME }}/.local/bin/svtplay-dl"
+    - url: https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp
+      file: "{{ ansible_facts.env.HOME }}/.local/bin/yt-dlp"
+    - url: https://github.com/docker/compose/releases/latest/download/docker-compose-linux-x86_64
+      file: /usr/local/bin/docker-compose
+      become: yes
+    - cmd: curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-4 | bash
+      file: /usr/local/bin/helm
+      become: yes
+    - url: https://dl.k8s.io/release/{{ lookup('ansible.builtin.url', 'https://dl.k8s.io/release/stable.txt') }}/bin/linux/amd64/kubectl
+      file: /usr/local/bin/kubectl
+      become: yes
+    - url: https://github.com/kubernetes/minikube/releases/latest/download/minikube-linux-amd64
+      file: /usr/local/bin/minikube
+      become: yes
+
+- community.general.flatpak_remote:
+    name: flathub
+  become: yes
+
+- community.general.flatpak:
+    name: "{{ item.name }}"
+  loop:
+    - name: org.gimp.GIMP
+    - name: org.keepassxc.KeePassXC
+    - name: org.videolan.VLC
+
+- community.general.ini_file:
+    path: /etc/fwupd/remotes.d/lvfs.conf
+    section: fwupd Remote
+    option: Enabled
+    value: "false"
+    create: no
+    no_extra_spaces: yes
+  become: yes

@@ -5,65 +5,16 @@
 - hosts: localhost
 
   tasks:
-    - import_tasks: containers.yml
-
-    - import_tasks: packages.yml
+    - import_tasks: software.yml
 
     - ansible.builtin.command:
         cmd: firewall-cmd --set-default-zone=drop
       register: command_result
       changed_when: "'ZONE_ALREADY_SET' not in command_result.stderr"
 
-    - ansible.builtin.hostname:
-        name: "{{ ansible_facts.product_version | split | first | lower }}"
-        use: systemd
-
-    - ansible.builtin.lineinfile:
-        path: "{{ item.path }}"
-        regexp: "{{ item.regexp | default(omit) }}"
-        line: "{{ item.line }}"
-        mode: "{{ item.mode | default(omit) }}"
-        create: "{{ item.create | default(omit) }}"
-      loop:
-        - path: "{{ ansible_facts.env.HOME }}/.bashrc"
-          regexp: ^export EDITOR=
-          line: export EDITOR=/usr/bin/vim
-        - path: "{{ ansible_facts.env.HOME }}/.bashrc"
-          regexp: ^export HISTCONTROL=
-          line: export HISTCONTROL=ignoreboth
-        - path: "{{ ansible_facts.env.HOME }}/.bashrc"
-          regexp: ^alias rclone-sync=
-          line: alias rclone-sync='rclone sync remote:/ ~/Remote'
-        - path: "{{ ansible_facts.env.HOME }}/.git-credentials"
-          line: "{{ git_credential }}"
-          mode: "600"
-          create: yes
-
-    - ansible.builtin.shell:
-        cmd: "{{ item.cmd | default(['curl', '--create-dirs', '--location', '--output', item.file, item.url | default(omit), '&&', 'chmod', '+x', item.file] | join(' ')) }}"
-        creates: "{{ item.file }}"
-      loop:
-        - url: https://gist.githubusercontent.com/luudvig/160c757005be61102bac4e3128ab313e/raw/encrypt-symmetric.sh
-          file: "{{ ansible_facts.env.HOME }}/.local/bin/encrypt-symmetric.sh"
-        - url: https://gist.githubusercontent.com/luudvig/10d227c86139029e73f4fdfc763d768e/raw/two-pass.sh
-          file: "{{ ansible_facts.env.HOME }}/.local/bin/two-pass.sh"
-        - cmd: curl --location --output-dir /tmp --remote-name https://github.com/denoland/deno/releases/latest/download/deno-x86_64-unknown-linux-gnu.zip && unzip /tmp/deno-x86_64-unknown-linux-gnu.zip deno -d {{ ansible_facts.env.HOME }}/.local/bin
-          file: "{{ ansible_facts.env.HOME }}/.local/bin/deno"
-        - cmd: curl --location --output-dir /tmp --remote-name https://downloads.rclone.org/rclone-current-linux-amd64.zip && unzip -j /tmp/rclone-current-linux-amd64.zip \*/rclone -d {{ ansible_facts.env.HOME }}/.local/bin
-          file: "{{ ansible_facts.env.HOME }}/.local/bin/rclone"
-        - url: https://svtplay-dl.se/download/latest/svtplay-dl
-          file: "{{ ansible_facts.env.HOME }}/.local/bin/svtplay-dl"
-        - url: https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp
-          file: "{{ ansible_facts.env.HOME }}/.local/bin/yt-dlp"
-
-    - ansible.builtin.shell:
-        cmd: "gnome-extensions info {{ item }} | grep 'Enabled: Yes' || gnome-extensions enable {{ item }}"
-      register: shell_result
-      changed_when: "'Enabled: Yes' not in shell_result.stdout"
-      loop:
-        - launch-new-instance@gnome-shell-extensions.gcampax.github.com
-        - places-menu@gnome-shell-extensions.gcampax.github.com
-        - window-list@gnome-shell-extensions.gcampax.github.com
+    - ansible.builtin.file:
+        path: "{{ ansible_facts.env.HOME }}/.config/systemd/user"
+        state: directory
 
     - ansible.builtin.copy:
         content: "{{ item.content }}"
@@ -92,6 +43,43 @@
             WantedBy=default.target
           dest: "{{ ansible_facts.env.HOME }}/.config/systemd/user/delxulstore.service"
 
+    - ansible.builtin.hostname:
+        name: "{{ ansible_facts.product_version | split | first | lower }}"
+        use: systemd
+
+    - ansible.builtin.lineinfile:
+        path: "{{ item.path }}"
+        regexp: "{{ item.regexp | default(omit) }}"
+        line: "{{ item.line }}"
+        mode: "{{ item.mode | default(omit) }}"
+        create: "{{ item.create | default(omit) }}"
+      loop:
+        - path: "{{ ansible_facts.env.HOME }}/.bashrc"
+          regexp: ^export EDITOR=
+          line: export EDITOR=/usr/bin/vim
+        - path: "{{ ansible_facts.env.HOME }}/.bashrc"
+          regexp: ^export HISTCONTROL=
+          line: export HISTCONTROL=ignoreboth
+        - path: "{{ ansible_facts.env.HOME }}/.bashrc"
+          regexp: ^export DOCKER_HOST=
+          line: export DOCKER_HOST=unix://$XDG_RUNTIME_DIR/podman/podman.sock
+        - path: "{{ ansible_facts.env.HOME }}/.bashrc"
+          regexp: ^alias rclone-sync=
+          line: alias rclone-sync='rclone sync remote:/ ~/Remote'
+        - path: "{{ ansible_facts.env.HOME }}/.git-credentials"
+          line: "{{ git_credential }}"
+          mode: "600"
+          create: yes
+
+    - ansible.builtin.shell:
+        cmd: "gnome-extensions info {{ item }} | grep 'Enabled: Yes' || gnome-extensions enable {{ item }}"
+      register: shell_result
+      changed_when: "'Enabled: Yes' not in shell_result.stdout"
+      loop:
+        - launch-new-instance@gnome-shell-extensions.gcampax.github.com
+        - places-menu@gnome-shell-extensions.gcampax.github.com
+        - window-list@gnome-shell-extensions.gcampax.github.com
+
     - ansible.builtin.systemd_service:
         name: "{{ item.name | default(omit) }}"
         daemon_reload: "{{ item.daemon_reload | default(omit) }}"
@@ -103,6 +91,14 @@
           enabled: yes
         - name: delxulstore.service
           enabled: yes
+        - name: podman.socket
+          enabled: yes
+
+    - ansible.builtin.user:
+        name: "{{ ansible_facts.user_id }}"
+        append: yes
+        groups: libvirt
+      become: yes
 
     - community.general.dconf:
         key: "{{ item.key }}"
