@@ -1,0 +1,178 @@
+---
+
+# ansible-playbook -K -i 192.168.0.X, -k -u acer main.yml
+
+- hosts: all
+
+  tasks:
+    - ansible.builtin.dnf:
+        name: "*"
+        state: latest
+      become: yes
+      register: dnf_result
+
+    - ansible.builtin.reboot:
+      become: yes
+      when: dnf_result.changed
+
+    - ansible.builtin.get_url:
+        url: https://repository.mullvad.net/rpm/stable/mullvad.repo
+        dest: /etc/yum.repos.d/mullvad.repo
+      become: yes
+
+    - ansible.builtin.dnf:
+        name: "{{ item.name }}"
+      become: yes
+      loop:
+        - name: dnf-automatic
+        - name: mullvad-vpn
+
+    - ansible.builtin.command:
+        cmd: "{{ item.cmd }}"
+        creates: "{{ item.creates | default(omit) }}"
+      when: "'mullvad' not in item.cmd or mullvad_account | length > 0 and mullvad_relay | length > 0"
+      loop:
+        - cmd: loginctl enable-linger acer
+          creates: /var/lib/systemd/linger/acer
+        - cmd: mullvad account login {{ mullvad_account }}
+        - cmd: mullvad auto-connect set on
+        - cmd: mullvad lan set allow
+        - cmd: mullvad lockdown-mode set on
+        - cmd: mullvad relay set location {{ mullvad_relay }}
+
+    - ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: directory
+      become: "{{ item.become | default(omit) }}"
+      loop:
+        - path: /etc/systemd/logind.conf.d
+          become: yes
+        - path: "{{ ansible_facts.env.HOME }}/.config/containers/systemd"
+        - path: "{{ ansible_facts.env.HOME }}/transmission/config"
+        - path: "{{ ansible_facts.env.HOME }}/transmission/downloads"
+
+    - ansible.builtin.set_fact:
+        transmission_pass: "{{ ansible_password }}"
+
+    - ansible.builtin.copy:
+        content: "{{ item.content }}"
+        dest: "{{ item.dest }}"
+      become: "{{ item.become | default(omit) }}"
+      loop:
+        - content: |
+            [connection-mac-randomization]
+            wifi.cloned-mac-address=permanent
+          dest: /etc/NetworkManager/conf.d/wifi_rand_mac.conf
+          become: yes
+        - content: |
+            [commands]
+            apply_updates=True
+            reboot=when-needed
+          dest: /etc/dnf/automatic.conf
+          become: yes
+        - content: |
+            [Login]
+            HandleLidSwitch=ignore
+          dest: /etc/systemd/logind.conf.d/handle_lid_switch.conf
+          become: yes
+        - content: |
+            [Container]
+            AutoUpdate=registry
+            Environment=TZ=Europe/Stockholm
+            Image=docker.io/sharevb/it-tools:latest
+            PublishPort=8080:8080
+
+            [Service]
+            Restart=always
+
+            [Install]
+            WantedBy=default.target
+          dest: "{{ ansible_facts.env.HOME }}/.config/containers/systemd/it-tools.container"
+        - content: |
+            [Container]
+            AutoUpdate=registry
+            Environment=TZ=Europe/Stockholm
+            Environment=USER=acer
+            Environment=PASS={{ transmission_pass | quote }}
+            Environment=WHITELIST=192.168.0.*
+            Image=docker.io/linuxserver/transmission:latest
+            PublishPort=9091:9091
+            UserNS=keep-id:uid=911,gid=911
+            Volume={{ ansible_facts.env.HOME }}/transmission/config:/config:Z
+            Volume={{ ansible_facts.env.HOME }}/transmission/downloads:/downloads:Z
+
+            [Service]
+            Restart=always
+
+            [Install]
+            WantedBy=default.target
+          dest: "{{ ansible_facts.env.HOME }}/.config/containers/systemd/transmission.container"
+
+    - ansible.builtin.hostname:
+        name: "{{ ansible_facts.product_name | split | first | lower }}"
+        use: systemd
+      become: yes
+
+    - ansible.builtin.lineinfile:
+        path: /etc/profile.d/sh.local
+        regexp: ^export HISTCONTROL=
+        line: export HISTCONTROL=ignoreboth
+      become: yes
+
+    - ansible.builtin.systemd_service:
+        name: "{{ item.name }}"
+        enabled: "{{ item.enabled }}"
+        scope: "{{ item.scope | default(omit) }}"
+      become: "{{ item.become | default(omit) }}"
+      loop:
+        - name: dnf-automatic.timer
+          enabled: yes
+          become: yes
+        - name: fwupd-refresh.timer
+          enabled: no
+          become: yes
+        - name: podman-auto-update.timer
+          enabled: yes
+          scope: user
+        - name: smartd.service
+          enabled: no
+          become: yes
+
+    - ansible.posix.firewalld:
+        port: "{{ item.port }}"
+        permanent: yes
+        state: enabled
+      become: yes
+      loop:
+        - port: 8080/tcp
+        - port: 9091/tcp
+
+    - ansible.posix.mount:
+        path: /media/WESTERN8TB
+        src: UUID=b8e13649-47d9-45f9-a2d0-b6d0f67bb81f
+        fstype: ext4
+        opts: defaults,noatime,nofail
+        passno: 2
+        state: present
+      become: yes
+
+    - community.general.lvol:
+        vg: fedora
+        lv: root
+        size: 100%VG
+      become: yes
+
+    - community.general.filesystem:
+        dev: /dev/mapper/fedora-root
+        fstype: xfs
+        resizefs: yes
+      become: yes
+
+  vars_prompt:
+    - name: mullvad_account
+      prompt: Mullvad account
+      private: no
+
+    - name: mullvad_relay
+      prompt: Mullvad relay
+      private: no
