@@ -1,36 +1,5 @@
 ---
 
-- ansible.builtin.file:
-    path: "{{ item }}"
-    state: directory
-  loop:
-    - "{{ ansible_facts.env.HOME }}/.config/containers/systemd"
-    - "{{ ansible_facts.env.HOME }}/Transmission/config"
-    - "{{ ansible_facts.env.HOME }}/Transmission/downloads"
-
-- ansible.builtin.copy:
-    content: "{{ item.content | default(omit) }}"
-    src: "{{ item.src | default(omit) }}"
-    dest: "{{ item.dest }}"
-    mode: "{{ item.mode | default(omit) }}"
-    force: "{{ item.force | default(omit) }}"
-  become: "{{ item.become | default(omit) }}"
-  loop:
-    - content: |
-        [Container]
-        Environment=TZ=Europe/Stockholm
-        Image=docker.io/linuxserver/transmission:latest
-        PublishPort=127.0.0.1:9091:9091
-        UserNS=keep-id:uid=911,gid=911
-        Volume={{ ansible_facts.env.HOME }}/Transmission/config:/config:Z
-        Volume={{ ansible_facts.env.HOME }}/Transmission/downloads:/downloads:Z
-      dest: "{{ ansible_facts.env.HOME }}/.config/containers/systemd/transmission.container"
-    - src: /etc/hosts
-      dest: /etc/hosts.orig
-      mode: a-w
-      force: no
-      become: yes
-
 - ansible.builtin.lineinfile:
     path: "{{ ansible_facts.env.HOME }}/.bashrc"
     regexp: ^export DOCKER_HOST=
