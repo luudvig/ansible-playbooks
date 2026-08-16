@@ -16,6 +16,8 @@
     - name: ffmpeg
       allowerasing: yes
     - name: mullvad-vpn
+    - name: newsboat
+    - name: rclone
     - name: vim-enhanced
 
 - ansible.builtin.shell:
@@ -29,8 +31,6 @@
       file: "{{ ansible_facts.env.HOME }}/.local/bin/two-pass.sh"
     - cmd: curl --location --output-dir /tmp --remote-name https://github.com/denoland/deno/releases/latest/download/deno-x86_64-unknown-linux-gnu.zip && unzip /tmp/deno-x86_64-unknown-linux-gnu.zip deno -d {{ ansible_facts.env.HOME }}/.local/bin
       file: "{{ ansible_facts.env.HOME }}/.local/bin/deno"
-    - cmd: curl --location --output-dir /tmp --remote-name https://downloads.rclone.org/rclone-current-linux-amd64.zip && unzip -j /tmp/rclone-current-linux-amd64.zip \*/rclone -d {{ ansible_facts.env.HOME }}/.local/bin
-      file: "{{ ansible_facts.env.HOME }}/.local/bin/rclone"
     - url: https://svtplay-dl.se/download/latest/svtplay-dl
       file: "{{ ansible_facts.env.HOME }}/.local/bin/svtplay-dl"
     - url: https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp

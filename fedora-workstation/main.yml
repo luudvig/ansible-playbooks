@@ -13,8 +13,19 @@
       changed_when: "'ZONE_ALREADY_SET' not in command_result.stderr"
 
     - ansible.builtin.file:
-        path: "{{ ansible_facts.env.HOME }}/.config/systemd/user"
-        state: directory
+        path: "{{ item.path }}"
+        src: "{{ item.src | default(omit) }}"
+        state: "{{ item.state }}"
+        force: "{{ item.force | default(omit) }}"
+      loop:
+        - path: "{{ ansible_facts.env.HOME }}/.config/systemd/user"
+          state: directory
+        - path: "{{ ansible_facts.env.HOME }}/.newsboat"
+          state: directory
+        - path: "{{ ansible_facts.env.HOME }}/.newsboat/urls"
+          src: ../Remote/newsboat.urls
+          state: link
+          force: yes
 
     - ansible.builtin.copy:
         content: "{{ item.content }}"
@@ -22,26 +33,33 @@
       loop:
         - content: |
             [Unit]
-            Description=Reset background
             ConditionKernelCommandLine=bgreset
             After=gnome-session.target
 
             [Service]
+            Type=oneshot
             ExecStart=/usr/bin/bash -c 'for k in "background picture-uri" "background picture-uri-dark" "screensaver picture-uri"; do /usr/bin/gsettings set org.gnome.desktop.$k "file:///usr/share/backgrounds/f{{ ansible_facts.distribution_major_version }}/default/f{{ ansible_facts.distribution_major_version }}.xml"; done'
 
             [Install]
             WantedBy=gnome-session.target
           dest: "{{ ansible_facts.env.HOME }}/.config/systemd/user/bgreset.service"
         - content: |
-            [Unit]
-            Description=Delete xulstore
-
             [Service]
+            Type=oneshot
             ExecStart=/usr/bin/find %h/.config/mozilla/firefox -name xulstore.json -delete
 
             [Install]
             WantedBy=default.target
           dest: "{{ ansible_facts.env.HOME }}/.config/systemd/user/delxulstore.service"
+        - content: |
+            [Service]
+            Type=oneshot
+            ExecStart=/usr/bin/rclone sync remote: %h/Remote
+          dest: "{{ ansible_facts.env.HOME }}/.config/systemd/user/rcsync.service"
+        - content: |
+            browser "firefox --new-tab %u > /dev/null 2>&1 &"
+            reload-threads 2
+          dest: "{{ ansible_facts.env.HOME }}/.newsboat/config"
 
     - ansible.builtin.hostname:
         name: "{{ ansible_facts.product_version | split | first | lower }}"
@@ -53,19 +71,19 @@
         line: "{{ item.line }}"
         mode: "{{ item.mode | default(omit) }}"
         create: "{{ item.create | default(omit) }}"
+      become: "{{ item.become | default(omit) }}"
       loop:
-        - path: "{{ ansible_facts.env.HOME }}/.bashrc"
+        - path: /etc/profile.d/sh.local
           regexp: ^export EDITOR=
           line: export EDITOR=/usr/bin/vim
-        - path: "{{ ansible_facts.env.HOME }}/.bashrc"
+          become: yes
+        - path: /etc/profile.d/sh.local
           regexp: ^export HISTCONTROL=
           line: export HISTCONTROL=ignoreboth
+          become: yes
         - path: "{{ ansible_facts.env.HOME }}/.bashrc"
           regexp: ^export DOCKER_HOST=
           line: export DOCKER_HOST=unix://$XDG_RUNTIME_DIR/podman/podman.sock
-        - path: "{{ ansible_facts.env.HOME }}/.bashrc"
-          regexp: ^alias rclone-sync=
-          line: alias rclone-sync='rclone sync remote:/ ~/Remote'
         - path: "{{ ansible_facts.env.HOME }}/.git-credentials"
           line: "{{ git_credential }}"
           mode: "600"
