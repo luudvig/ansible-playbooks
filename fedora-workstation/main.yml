@@ -174,6 +174,10 @@
           value: "true"
         - key: /org/gnome/shell/favorite-apps
           value: "['org.mozilla.firefox.desktop', 'org.gnome.Nautilus.desktop', 'org.gnome.Ptyxis.desktop', 'org.keepassxc.KeePassXC.desktop', 'mullvad-vpn.desktop']"
+        - key: /system/proxy/http/host
+          value: "'192.168.0.{{ gnome_proxy_http }}'"
+        - key: /system/proxy/http/port
+          value: "3128"
 
     - community.general.ini_file:
         path: "{{ item.path }}"
@@ -236,3 +240,8 @@
           31376562653464353134343664346435646437393230353234356165363639633264643261373932
           3262616664373661350a313165363066303566613366656432626463656433333236366661393763
           3964
+
+  vars_prompt:
+    - name: gnome_proxy_http
+      prompt: GNOME proxy http [192.168.0.X]
+      private: no
