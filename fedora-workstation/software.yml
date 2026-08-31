@@ -19,6 +19,7 @@
     - name: newsboat
     - name: rclone
     - name: vim-enhanced
+    - name: virt-viewer
 
 - ansible.builtin.shell:
     cmd: "{{ item.cmd | default(['curl', '--create-dirs', '--location', '--output', item.file, item.url | default(omit), '&&', 'chmod', '+x', item.file] | join(' ')) }}"

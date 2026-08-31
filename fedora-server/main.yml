@@ -24,6 +24,11 @@
         name: "{{ item.name }}"
       become: yes
       loop:
+        - name:
+            - cockpit-machines
+            - libvirt
+            - qemu-kvm-core
+            - virt-install
         - name: dnf-automatic
         - name: mullvad-vpn
 
@@ -92,6 +97,19 @@
             [Container]
             AutoUpdate=registry
             Environment=TZ=Europe/Stockholm
+            Image=docker.io/ubuntu/squid:latest
+            PublishPort=3128:3128
+
+            [Service]
+            Restart=always
+
+            [Install]
+            WantedBy=default.target
+          dest: "{{ ansible_facts.env.HOME }}/.config/containers/systemd/squid.container"
+        - content: |
+            [Container]
+            AutoUpdate=registry
+            Environment=TZ=Europe/Stockholm
             Environment=USER=acer
             Environment=PASS={{ transmission_pass | quote }}
             Environment=WHITELIST=192.168.0.*
@@ -144,6 +162,8 @@
         state: enabled
       become: yes
       loop:
+        - port: 3128/tcp
+        - port: 5900/tcp
         - port: 8080/tcp
         - port: 9091/tcp
 
