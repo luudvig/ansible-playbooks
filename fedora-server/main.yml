@@ -83,7 +83,7 @@
         - content: |
             [Service]
             Type=oneshot
-            ExecStart=/usr/bin/find /media -mindepth 1 -maxdepth 1 -type d -exec /usr/bin/mountpoint -q '{}' \; -exec /usr/bin/test -d '{}'-out \; -exec /usr/bin/rsync -r --remove-source-files -v '{}-out/' '{}/' \;
+            ExecStart=/usr/bin/find /media -mindepth 1 -maxdepth 1 -type d -exec /usr/bin/mountpoint -q '{}' \; -exec /usr/bin/test -d '{}-out' \; -exec /usr/bin/rsync -r --remove-source-files -v '{}-out/' '{}/' \;
 
             [Install]
             WantedBy=multi-user.target
