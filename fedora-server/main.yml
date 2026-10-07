@@ -83,11 +83,11 @@
         - content: |
             [Service]
             Type=oneshot
-            ExecStart=/usr/bin/find /media -mindepth 1 -maxdepth 1 -type d -exec /usr/bin/mountpoint -q '{}' \; -exec /usr/bin/test -d '{}'-out \; -exec /usr/bin/rsync -r --remove-source-files -v '{}'-out/ '{}'/ \;
+            ExecStart=/usr/bin/find /media -mindepth 1 -maxdepth 1 -type d -exec /usr/bin/mountpoint -q '{}' \; -exec /usr/bin/test -d '{}'-out \; -exec /usr/bin/rsync -r --remove-source-files -v '{}-out/' '{}/' \;
 
             [Install]
             WantedBy=multi-user.target
-          dest: /etc/systemd/system/media-sync.service
+          dest: /etc/systemd/system/media-out.service
           become: yes
         - content: |
             [Container]
@@ -158,7 +158,7 @@
         - name: fwupd-refresh.timer
           enabled: no
           become: yes
-        - name: media-sync.service
+        - name: media-out.service
           enabled: yes
           become: yes
         - name: podman-auto-update.timer
