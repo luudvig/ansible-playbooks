@@ -83,7 +83,29 @@
         - content: |
             [Service]
             Type=oneshot
-            ExecStart=/usr/bin/find /media -mindepth 1 -maxdepth 1 -type d -exec /usr/bin/mountpoint -q '{}' \; -exec /usr/bin/test -d '{}-out' \; -exec /usr/bin/rsync -r --remove-source-files -v '{}-out/' '{}/' \;
+            ExecStart=/usr/bin/find /media -mindepth 1 -maxdepth 1 -type d -exec /usr/bin/mountpoint -q '{}' \; -exec /usr/bin/test -d '{}-async/in' \; -exec /usr/bin/rsync -r --remove-source-files -v '{}-async/in/' '{}/' \;
+
+            [Install]
+            WantedBy=multi-user.target
+          dest: /etc/systemd/system/media-in.service
+          become: yes
+        - content: |
+            [Unit]
+            Before=media-out.service
+            After=media-in.service
+
+            [Service]
+            Type=oneshot
+            ExecStart=/usr/bin/find /media -mindepth 1 -maxdepth 1 -type d -exec /usr/bin/mountpoint -q '{}' \; -exec /usr/bin/test -d '{}-async' \; -exec /usr/bin/sh -c "/usr/bin/find '{}' > '{}-async/ls.txt'" \;
+
+            [Install]
+            WantedBy=multi-user.target
+          dest: /etc/systemd/system/media-ls.service
+          become: yes
+        - content: |
+            [Service]
+            Type=oneshot
+            ExecStart=/usr/bin/find /media -mindepth 1 -maxdepth 1 -type d -exec /usr/bin/mountpoint -q '{}' \; -exec /usr/bin/test -f '{}-async/out.txt' \; -exec /usr/bin/rsync --files-from='{}-async/out.txt' -r -v '{}-async/out/' '{}/' \;
 
             [Install]
             WantedBy=multi-user.target
@@ -157,6 +179,12 @@
           become: yes
         - name: fwupd-refresh.timer
           enabled: no
+          become: yes
+        - name: media-in.service
+          enabled: yes
+          become: yes
+        - name: media-ls.service
+          enabled: yes
           become: yes
         - name: media-out.service
           enabled: yes
