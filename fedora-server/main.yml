@@ -83,7 +83,7 @@
         - content: |
             [Service]
             Type=oneshot
-            ExecStart=/usr/bin/find /media -mindepth 1 -maxdepth 1 -type d -exec /usr/bin/mountpoint -q '{}' \; -exec /usr/bin/test -d '{}-async/in' \; -exec /usr/bin/rsync -r --remove-source-files -v '{}-async/in/' '{}/' \;
+            ExecStart=find /media -maxdepth 1 -type d -exec sh -c "mountpoint -q '{}' && test -d '{}-async/in' && rsync -r --remove-source-files -v '{}-async/in/' '{}/'" \;
 
             [Install]
             WantedBy=multi-user.target
@@ -91,21 +91,23 @@
           become: yes
         - content: |
             [Unit]
-            Before=media-out.service
             After=media-in.service
 
             [Service]
             Type=oneshot
-            ExecStart=/usr/bin/find /media -mindepth 1 -maxdepth 1 -type d -exec /usr/bin/mountpoint -q '{}' \; -exec /usr/bin/test -d '{}-async' \; -exec /usr/bin/sh -c "/usr/bin/find '{}/' | sort -f > '{}-async/ls.txt'" \;
+            ExecStart=find /media -maxdepth 1 -type d -exec sh -c "mountpoint -q '{}' && test -d '{}-async' && find '{}/' | sort -f > '{}-async/ls.txt'" \;
 
             [Install]
             WantedBy=multi-user.target
           dest: /etc/systemd/system/media-ls.service
           become: yes
         - content: |
+            [Unit]
+            After=media-ls.service
+
             [Service]
             Type=oneshot
-            ExecStart=/usr/bin/find /media -mindepth 1 -maxdepth 1 -type d -exec /usr/bin/mountpoint -q '{}' \; -exec /usr/bin/test -f '{}-async/out.txt' \; -exec /usr/bin/rsync --files-from='{}-async/out.txt' -r -v '{}/' '{}-async/out/' \;
+            ExecStart=find /media -maxdepth 1 -type d -exec sh -c "mountpoint -q '{}' && test -f '{}-async/out.txt' && rsync --files-from='{}-async/out.txt' -r -v '{}/' '{}-async/out/'" \;
 
             [Install]
             WantedBy=multi-user.target
