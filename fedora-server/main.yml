@@ -96,7 +96,7 @@
 
             [Service]
             Type=oneshot
-            ExecStart=/usr/bin/find /media -mindepth 1 -maxdepth 1 -type d -exec /usr/bin/mountpoint -q '{}' \; -exec /usr/bin/test -d '{}-async' \; -exec /usr/bin/sh -c "/usr/bin/find '{}/' > '{}-async/ls.txt'" \;
+            ExecStart=/usr/bin/find /media -mindepth 1 -maxdepth 1 -type d -exec /usr/bin/mountpoint -q '{}' \; -exec /usr/bin/test -d '{}-async' \; -exec /usr/bin/sh -c "/usr/bin/find '{}/' | sort -f > '{}-async/ls.txt'" \;
 
             [Install]
             WantedBy=multi-user.target
