@@ -83,7 +83,7 @@
         - content: |
             [Service]
             Type=oneshot
-            ExecStart=find /media -maxdepth 1 -type d -exec sh -c "mountpoint -q '{}' && test -d '{}-async/in' && rsync -r --remove-source-files -v '{}-async/in/' '{}/'" \;
+            ExecStart=/usr/bin/find /media -maxdepth 1 -type d -exec sh -c "mountpoint -q '{}' && test -d '{}-async/in' && rsync -r --remove-source-files -v '{}-async/in/' '{}/'" \;
 
             [Install]
             WantedBy=multi-user.target
@@ -95,7 +95,7 @@
 
             [Service]
             Type=oneshot
-            ExecStart=find /media -maxdepth 1 -type d -exec sh -c "mountpoint -q '{}' && test -d '{}-async' && find '{}/' | sort -f > '{}-async/ls.txt'" \;
+            ExecStart=/usr/bin/find /media -maxdepth 1 -type d -exec sh -c "mountpoint -q '{}' && test -d '{}-async' && find '{}/' | sort -f > '{}-async/ls.txt'" \;
 
             [Install]
             WantedBy=multi-user.target
@@ -107,7 +107,7 @@
 
             [Service]
             Type=oneshot
-            ExecStart=find /media -maxdepth 1 -type d -exec sh -c "mountpoint -q '{}' && test -f '{}-async/out.txt' && rsync --files-from='{}-async/out.txt' -r -v '{}/' '{}-async/out/'" \;
+            ExecStart=/usr/bin/find /media -maxdepth 1 -type d -exec sh -c "mountpoint -q '{}' && test -f '{}-async/out.txt' && rsync --files-from='{}-async/out.txt' -r -v '{}/' '{}-async/out/'" \;
 
             [Install]
             WantedBy=multi-user.target

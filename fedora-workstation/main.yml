@@ -38,7 +38,7 @@
 
             [Service]
             Type=oneshot
-            ExecStart=/usr/bin/bash -c 'for k in "background picture-uri" "background picture-uri-dark" "screensaver picture-uri"; do /usr/bin/gsettings set org.gnome.desktop.$k "file:///usr/share/backgrounds/f{{ ansible_facts.distribution_major_version }}/default/f{{ ansible_facts.distribution_major_version }}.xml"; done'
+            ExecStart=/usr/bin/sh -c 'for k in "background picture-uri" "background picture-uri-dark" "screensaver picture-uri"; do gsettings set org.gnome.desktop.$k "file:///usr/share/backgrounds/f{{ ansible_facts.distribution_major_version }}/default/f{{ ansible_facts.distribution_major_version }}.xml"; done'
 
             [Install]
             WantedBy=gnome-session.target
