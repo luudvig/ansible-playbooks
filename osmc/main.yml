@@ -5,50 +5,8 @@
 - hosts: all
 
   tasks:
-    - ansible.builtin.deb822_repository:
-        components: stable
-        name: docker
-        signed_by: https://download.docker.com/linux/debian/gpg
-        suites: "{{ ansible_facts.distribution_release }}"
-        uris: https://download.docker.com/linux/debian
-        install_python_debian: yes
-
     - ansible.builtin.apt:
-        name: "{{ item.name | default(omit) }}"
-        update_cache: "{{ item.update_cache | default(omit) }}"
-      loop:
-        - update_cache: yes
-        - name:
-            - containerd.io:arm64
-            - docker-ce-cli:arm64
-            - docker-ce:arm64
-            - rsync
-
-    - ansible.builtin.cron:
-        name: wireguard refresh
-        job: /home/osmc/.wireguard/refresh.sh
-        minute: "0"
-        hour: "3"
-        user: osmc
-
-    - ansible.builtin.file:
-        path: /home/osmc/.wireguard
-        state: directory
-        owner: osmc
-        group: osmc
-
-    - ansible.builtin.copy:
-        content: |
-          #!/bin/bash
-          docker image pull -q linuxserver/wireguard:latest || exit
-          docker container stop wireguard
-          docker container rm wireguard
-          docker container run -d --name wireguard --cap-add NET_ADMIN -e PUID=$(id -u) -e PGID=$(id -g) -e TZ=Europe/Stockholm -e SERVERURL=localhost -e PEERS=1 -e LOG_CONFS=false -p 51820:51820/udp --restart always -v /home/osmc/.wireguard/config:/config linuxserver/wireguard:latest
-          docker image prune -f
-        dest: /home/osmc/.wireguard/refresh.sh
-        mode: "555"
-        owner: osmc
-        group: osmc
+        name: rsync
 
     - ansible.builtin.lineinfile:
         path: "{{ item.path }}"
@@ -84,11 +42,6 @@
         - path: /home/osmc/.bash_logout
           regexp: '^(\s*)(\[\s+-x\s+\/usr\/bin\/clear_console\s.*)$'
           replace: '\1: # \2'
-
-    - ansible.builtin.user:
-        name: osmc
-        append: yes
-        groups: docker
 
     - ansible.builtin.raw: echo -e "{{ ansible_password }}\n{{ new_password }}\n{{ new_password }}" | passwd
       become_user: osmc
