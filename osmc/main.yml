@@ -8,11 +8,19 @@
     - ansible.builtin.apt:
         name: rsync
 
+    - ansible.builtin.get_url:
+        url: https://github.com/lbschenkel/plugin.video.svtplay/releases/latest/download/plugin.video.svtplay-5.1.22+lbschenkel.1.zip
+        dest: /home/osmc
+        checksum: sha256:632bcc2e375b1fd7f42da09c856f20ab0464e6d85b418b5dc5e237dd9e139863
+        owner: osmc
+        group: osmc
+
     - ansible.builtin.lineinfile:
         path: "{{ item.path }}"
         regexp: "{{ item.regexp }}"
         line: "{{ item.line }}"
         backrefs: "{{ item.backrefs | default(omit) }}"
+        insertbefore: "{{ item.insertbefore | default(omit) }}"
       loop:
         - path: /boot/config-user.txt
           regexp: ^#?arm_freq=
@@ -23,6 +31,10 @@
         - path: /boot/config-user.txt
           regexp: ^#?over_voltage=
           line: over_voltage=6
+        - path: /home/osmc/.bashrc
+          regexp: ^#?TERM=
+          line: TERM=xterm
+          insertbefore: BOF
         - path: /home/osmc/.bashrc
           regexp: ^#?alias ll=(.*)
           line: alias ll=\1
@@ -45,7 +57,7 @@
 
     - ansible.builtin.raw: echo -e "{{ ansible_password }}\n{{ new_password }}\n{{ new_password }}" | passwd
       become_user: osmc
-      when: new_password != ansible_password
+      when: new_password != "" and new_password != ansible_password
 
   vars_prompt:
     - name: new_password
