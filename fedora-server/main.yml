@@ -152,10 +152,20 @@
       become: yes
 
     - ansible.builtin.lineinfile:
-        path: /etc/profile.d/sh.local
-        regexp: ^export HISTCONTROL=
-        line: export HISTCONTROL=ignoreboth
-      become: yes
+        path: "{{ item.path }}"
+        regexp: "{{ item.regexp | default(omit) }}"
+        line: "{{ item.line }}"
+      become: "{{ item.become | default(omit) }}"
+      loop:
+        - path: /etc/profile.d/sh.local
+          regexp: ^export HISTCONTROL=
+          line: export HISTCONTROL=ignoreboth
+          become: yes
+        - path: "{{ ansible_facts.env.HOME }}/.bash_profile"
+          regexp: ^export PROMPT_COLOR=
+          line: export PROMPT_COLOR=34
+        - path: "{{ ansible_facts.env.HOME }}/.bash_profile"
+          line: curl https://am.i.mullvad.net/connected
 
     - ansible.builtin.systemd_service:
         name: "{{ item.name }}"
