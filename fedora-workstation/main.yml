@@ -38,7 +38,7 @@
 
             [Service]
             Type=oneshot
-            ExecStart=/usr/bin/sh -c 'for k in "background picture-uri" "background picture-uri-dark" "screensaver picture-uri"; do gsettings set org.gnome.desktop.$k "file:///usr/share/backgrounds/f{{ ansible_facts.distribution_major_version }}/default/f{{ ansible_facts.distribution_major_version }}.xml"; done'
+            ExecStart=/usr/bin/sh -c 'for s in background screensaver; do for k in color-shading-type picture-options picture-uri picture-uri-dark primary-color secondary-color; do gsettings reset org.gnome.desktop.$s $k; done; done'
 
             [Install]
             WantedBy=gnome-session.target
@@ -58,7 +58,7 @@
           dest: "{{ ansible_facts.env.HOME }}/.config/systemd/user/rcsync.service"
         - content: |
             browser "firefox --new-tab %u > /dev/null 2>&1 &"
-            reload-threads 2
+            reload-threads 3
           dest: "{{ ansible_facts.env.HOME }}/.newsboat/config"
 
     - ansible.builtin.hostname:
@@ -94,13 +94,18 @@
           create: yes
 
     - ansible.builtin.shell:
-        cmd: "gnome-extensions info {{ item }} | grep 'Enabled: Yes' || gnome-extensions enable {{ item }}"
+        cmd: "gnome-extensions info {{ item.uuid }} | grep 'Enabled: {{ item.enabled }}' || gnome-extensions {{ 'enable' if item.enabled == 'Yes' else 'disable' }} {{ item.uuid }}"
       register: shell_result
-      changed_when: "'Enabled: Yes' not in shell_result.stdout"
+      changed_when: "'Enabled: ' + item.enabled not in shell_result.stdout"
       loop:
-        - launch-new-instance@gnome-shell-extensions.gcampax.github.com
-        - places-menu@gnome-shell-extensions.gcampax.github.com
-        - window-list@gnome-shell-extensions.gcampax.github.com
+        - uuid: background-logo@fedorahosted.org
+          enabled: "No"
+        - uuid: launch-new-instance@gnome-shell-extensions.gcampax.github.com
+          enabled: "Yes"
+        - uuid: places-menu@gnome-shell-extensions.gcampax.github.com
+          enabled: "Yes"
+        - uuid: window-list@gnome-shell-extensions.gcampax.github.com
+          enabled: "Yes"
 
     - ansible.builtin.systemd_service:
         name: "{{ item.name | default(omit) }}"
