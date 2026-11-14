@@ -29,7 +29,7 @@
             - libvirt
             - qemu-kvm-core
             - virt-install
-        - name: dnf-automatic
+        - name: dnf5-plugin-automatic
         - name: mullvad-vpn
 
     - ansible.builtin.command:
@@ -53,10 +53,12 @@
         - path: /etc/systemd/logind.conf.d
           become: yes
         - path: "{{ ansible_facts.env.HOME }}/.config/containers/systemd"
+        - path: "{{ ansible_facts.env.HOME }}/share"
         - path: "{{ ansible_facts.env.HOME }}/transmission/config"
         - path: "{{ ansible_facts.env.HOME }}/transmission/downloads"
 
     - ansible.builtin.set_fact:
+        exports_address: 192.168.0.{{ exports_host }}
         transmission_pass: "{{ ansible_password }}"
 
     - ansible.builtin.copy:
@@ -68,6 +70,10 @@
             [connection-mac-randomization]
             wifi.cloned-mac-address=permanent
           dest: /etc/NetworkManager/conf.d/wifi_rand_mac.conf
+          become: yes
+        - content: |
+            {{ ansible_facts.env.HOME }}/share {{ exports_address }}(subtree_check)
+          dest: /etc/exports.d/share.exports
           become: yes
         - content: |
             [commands]
@@ -173,7 +179,7 @@
         scope: "{{ item.scope | default(omit) }}"
       become: "{{ item.become | default(omit) }}"
       loop:
-        - name: dnf-automatic.timer
+        - name: dnf5-automatic.timer
           enabled: yes
           become: yes
         - name: fwupd-refresh.timer
@@ -188,6 +194,9 @@
         - name: media-out.service
           enabled: yes
           become: yes
+        - name: nfs-server.service
+          enabled: yes
+          become: yes
         - name: podman-auto-update.timer
           enabled: yes
           scope: user
@@ -196,7 +205,8 @@
           become: yes
 
     - ansible.posix.firewalld:
-        port: "{{ item.port }}"
+        port: "{{ item.port | default(omit) }}"
+        service: "{{ item.service | default(omit) }}"
         permanent: yes
         state: enabled
       become: yes
@@ -204,6 +214,9 @@
         - port: 5900/tcp
         - port: 8080/tcp
         - port: 9091/tcp
+        - service: mountd
+        - service: nfs
+        - service: rpc-bind
 
     - ansible.posix.mount:
         path: /media/WESTERN8TB
@@ -227,6 +240,10 @@
       become: yes
 
   vars_prompt:
+    - name: exports_host
+      prompt: Exports host [192.168.0.X]
+      private: no
+
     - name: mullvad_account
       prompt: Mullvad account
       private: no
